@@ -23,9 +23,10 @@ export function formatPrimitive(value) {
  * @param {'left' | 'right'} side
  * @param {boolean} showUnchanged
  * @param {string} activeFilter
- * @returns {{ path: string; text: string; status: string; indent: number }[]}
+ * @param {Set<string>} [expandedPaths]
+ * @returns {{ path: string; text: string; status: string; indent: number; isCollapse?: boolean }[]}
  */
-export function flattenForSplit(nodes, side, showUnchanged, activeFilter) {
+export function flattenForSplit(nodes, side, showUnchanged, activeFilter, expandedPaths = new Set()) {
   const lines = [];
 
   function shouldShow(status) {
@@ -34,27 +35,33 @@ export function flattenForSplit(nodes, side, showUnchanged, activeFilter) {
     return true;
   }
 
-  function walk(node, indent = 0) {
+  function walk(node, indent = 0, forceShow = false) {
     if (node.key === 'root' && node.children) {
-      node.children.forEach((c) => walk(c, indent));
+      node.children.forEach((c) => walk(c, indent, forceShow));
       return;
     }
 
     const status = node.status;
-    if (!shouldShow(status) && status === 'unchanged' && node.children?.length) {
-      const count = countDescendants(node);
-      lines.push({
-        path: node.path,
-        text: `▶ ${count} unchanged keys`,
-        status: 'unchanged-collapsed',
-        indent,
-        isCollapse: true,
-        node,
-      });
-      return;
+
+    // Unchanged container: either collapse it or render it expanded
+    if (!forceShow && !shouldShow(status) && status === 'unchanged' && node.children?.length) {
+      if (!expandedPaths.has(node.path)) {
+        const count = countDescendants(node);
+        lines.push({
+          path: node.path,
+          text: `${count} unchanged line${count !== 1 ? 's' : ''}`,
+          status: 'unchanged-collapsed',
+          indent,
+          isCollapse: true,
+          node,
+        });
+        return;
+      }
+      // Expanded: render this node and all descendants normally
+      forceShow = true;
     }
 
-    if (!shouldShow(status)) return;
+    if (!forceShow && !shouldShow(status)) return;
 
     let text = '';
     if (node.type === 'primitive') {
@@ -78,10 +85,10 @@ export function flattenForSplit(nodes, side, showUnchanged, activeFilter) {
     }
 
     if (node.children) {
-      node.children.forEach((c) => walk(c, indent + 1));
+      node.children.forEach((c) => walk(c, indent + 1, forceShow));
       if (node.type === 'object' || node.type === 'array') {
         const close = node.type === 'object' ? '  },' : '  ],';
-        if (shouldShow(status) || showUnchanged) {
+        if (forceShow || shouldShow(status) || showUnchanged) {
           lines.push({
             path: `${node.path}__close`,
             text: close,

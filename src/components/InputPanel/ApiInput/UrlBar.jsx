@@ -40,36 +40,41 @@ export default function UrlBar({ url, pathVariables, onChange, validationError }
       <label className="text-xs font-semibold text-zinc-600 uppercase tracking-wide">
         URL
       </label>
-      <div className="relative">
-        <div
-          aria-hidden
-          className="absolute inset-0 px-3 py-2 font-mono text-sm pointer-events-none whitespace-pre overflow-hidden text-transparent"
-        >
-          {parts.map((p, i) =>
-            p.type === 'plain' ? (
-              <span key={i}>{p.text}</span>
-            ) : (
-              <span
-                key={i}
-                className={
-                  p.type === 'filled'
-                    ? 'text-green-700'
-                    : 'text-orange-700'
-                }
-              >
-                {p.text}
-              </span>
-            ),
-          )}
+      <div className="flex gap-2">
+        <span className="shrink-0 inline-flex items-center px-3 py-2 text-xs font-bold tracking-wide text-blue-700 bg-blue-50 border border-blue-200 rounded-lg select-none">
+          GET
+        </span>
+        <div className="relative flex-1">
+          <div
+            aria-hidden
+            className="absolute inset-0 px-3 py-2 font-mono text-sm pointer-events-none whitespace-pre overflow-hidden text-transparent"
+          >
+            {parts.map((p, i) =>
+              p.type === 'plain' ? (
+                <span key={i}>{p.text}</span>
+              ) : (
+                <span
+                  key={i}
+                  className={
+                    p.type === 'filled'
+                      ? 'text-green-700'
+                      : 'text-orange-700'
+                  }
+                >
+                  {p.text}
+                </span>
+              ),
+            )}
+          </div>
+          <input
+            value={url}
+            onChange={(e) => onChange(e.target.value)}
+            placeholder="https://api.example.com/{{id}}"
+            className={`w-full px-3 py-2 font-mono text-sm bg-white border rounded-lg text-zinc-900 focus:outline-none focus:ring-2 focus:ring-zinc-900 focus:ring-offset-2 ${
+              validationError ? 'border-red-600' : 'border-zinc-300'
+            }`}
+          />
         </div>
-        <input
-          value={url}
-          onChange={(e) => onChange(e.target.value)}
-          placeholder="https://api.example.com/{{id}}"
-          className={`w-full px-3 py-2 font-mono text-sm bg-white border rounded-lg text-zinc-900 focus:outline-none focus:ring-2 focus:ring-zinc-900 focus:ring-offset-2 ${
-            validationError ? 'border-red-600' : 'border-zinc-300'
-          }`}
-        />
       </div>
       {validationError && (
         <p className="text-xs text-red-700 font-medium">{validationError}</p>
