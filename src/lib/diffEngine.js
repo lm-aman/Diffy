@@ -13,7 +13,7 @@
  * @property {'object' | 'array' | 'primitive'} type
  */
 
-const seen = new WeakSet();
+let seen = new WeakSet();
 
 function isObject(val) {
   return val !== null && typeof val === 'object' && !Array.isArray(val);
@@ -226,7 +226,7 @@ function buildSubtree(leftVal, rightVal, path, key, status) {
  * @returns {DiffNode[]}
  */
 export function computeDiff(leftJson, rightJson) {
-  seen.clear();
+  seen = new WeakSet();
   const left = leftJson ?? {};
   const right = rightJson ?? {};
   const root = diffNodes(left, right, '', 'root');

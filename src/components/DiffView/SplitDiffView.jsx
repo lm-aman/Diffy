@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useRef } from 'react';
 import { useAppStore } from '../../store/useAppStore.js';
 import { flattenForSplit } from '../../lib/diffRender.js';
 import DiffPane from './DiffPane.jsx';
@@ -10,29 +10,41 @@ export default function SplitDiffView() {
   const expandedPaths = useAppStore((s) => s.expandedPaths);
   const toggleExpandedPath = useAppStore((s) => s.toggleExpandedPath);
 
-  const processLines = (side) => {
-    if (!diffResult) return [];
-    return flattenForSplit(diffResult, side, showUnchanged, activeFilter).filter(
-      (line) => !line.isCollapse || !expandedPaths.has(line.path),
-    );
+  const leftRef = useRef(null);
+  const rightRef = useRef(null);
+  const syncingRef = useRef(false);
+
+  const handleLeftScroll = (e) => {
+    if (syncingRef.current) return;
+    if (!rightRef.current) return;
+    syncingRef.current = true;
+    rightRef.current.scrollTop = e.target.scrollTop;
+    syncingRef.current = false;
+  };
+
+  const handleRightScroll = (e) => {
+    if (syncingRef.current) return;
+    if (!leftRef.current) return;
+    syncingRef.current = true;
+    leftRef.current.scrollTop = e.target.scrollTop;
+    syncingRef.current = false;
   };
 
   const leftLines = useMemo(
-    () => processLines('left'),
+    () =>
+      diffResult
+        ? flattenForSplit(diffResult, 'left', showUnchanged, activeFilter, expandedPaths)
+        : [],
     [diffResult, showUnchanged, activeFilter, expandedPaths],
   );
 
   const rightLines = useMemo(
-    () => processLines('right'),
+    () =>
+      diffResult
+        ? flattenForSplit(diffResult, 'right', showUnchanged, activeFilter, expandedPaths)
+        : [],
     [diffResult, showUnchanged, activeFilter, expandedPaths],
   );
-
-  const collapseLines = useMemo(() => {
-    if (!diffResult) return [];
-    return flattenForSplit(diffResult, 'left', showUnchanged, activeFilter).filter(
-      (l) => l.isCollapse,
-    );
-  }, [diffResult, showUnchanged, activeFilter]);
 
   if (!diffResult) {
     return (
@@ -44,27 +56,31 @@ export default function SplitDiffView() {
 
   return (
     <div className="grid grid-cols-2 gap-0 border-t border-zinc-200 min-h-[240px]">
-      <div className="border-r border-zinc-200">
+      <div className="border-r border-zinc-200 flex flex-col">
         <div className="px-3 py-2 text-xs font-semibold text-zinc-700 bg-zinc-100 border-b border-zinc-200">
           Left
         </div>
-        {collapseLines.map((line) => (
-          <button
-            key={line.path}
-            type="button"
-            onClick={() => toggleExpandedPath(line.path)}
-            className="w-full text-left px-4 py-1 text-xs text-zinc-700 hover:bg-zinc-100 border-b border-zinc-100"
-          >
-            {expandedPaths.has(line.path) ? '▼' : '▶'} {line.text}
-          </button>
-        ))}
-        <DiffPane lines={leftLines} side="left" />
+        <DiffPane
+          ref={leftRef}
+          lines={leftLines}
+          side="left"
+          onScroll={handleLeftScroll}
+          onTogglePath={toggleExpandedPath}
+          expandedPaths={expandedPaths}
+        />
       </div>
-      <div>
+      <div className="flex flex-col">
         <div className="px-3 py-2 text-xs font-semibold text-zinc-700 bg-zinc-100 border-b border-zinc-200">
           Right
         </div>
-        <DiffPane lines={rightLines} side="right" />
+        <DiffPane
+          ref={rightRef}
+          lines={rightLines}
+          side="right"
+          onScroll={handleRightScroll}
+          onTogglePath={toggleExpandedPath}
+          expandedPaths={expandedPaths}
+        />
       </div>
     </div>
   );
