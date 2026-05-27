@@ -47,25 +47,18 @@ export function appendApiKeyToUrl(url, apiConfig) {
   return `${url}${sep}${encodeURIComponent(apiConfig.authValues.keyName)}=${encodeURIComponent(apiConfig.authValues.keyValue)}`;
 }
 
-const useCorsProxy =
-  import.meta.env.DEV || import.meta.env.VITE_USE_CORS_PROXY === 'true';
-
 /**
  * @param {string} url
  * @param {Record<string, string>} headers
  */
 export async function fetchJson(url, headers) {
-  const response = useCorsProxy
-    ? await fetch('/__diffy-proxy', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url, headers }),
-      })
-    : await fetch(url, {
-        method: 'GET',
-        headers,
-        mode: 'cors',
-      });
+  // Always route through the same-origin proxy so CORS is never an issue,
+  // whether running under the Vite dev server or a Netlify deployment.
+  const response = await fetch('/__diffy-proxy', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ url, headers }),
+  });
 
   const text = await response.text();
 
